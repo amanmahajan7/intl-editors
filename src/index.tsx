@@ -6,14 +6,16 @@ import { IntlProvider, addLocaleData } from "react-intl";
 import {
   GridDecimalEditor,
   GridCurrencyEditor,
-  GridPercentEditor
+  GridPercentEditor,
+  GridRateEditor
 } from "./IntlEditors";
 
 import {
   DecimalFormatter,
   CurrencyFormatter,
   PercentFormatter,
-  RateFormatter
+  RateFormatter,
+  TechRateFormatter
 } from "./IntlFormatters";
 
 const en = require("react-intl/locale-data/en");
@@ -30,8 +32,8 @@ class Editors extends React.Component {
     currencyCode: "USD"
   };
   handleChange = e => {
-    const value = e.target.value === "" ? undefined : e.target.value;
-    this.setState({ [e.target.name]: value });
+    console.log({ [e.target.name]: e.target.value })
+    this.setState({ [e.target.name]: e.target.value });
   };
 
   public render() {
@@ -94,8 +96,8 @@ class Editors extends React.Component {
                   Grid Decimal Editor:
                   <GridDecimalEditor
                     defaultValue={2}
-                    minimumFractionDigits={this.state.minimumFractionDigits}
-                    maximumFractionDigits={this.state.maximumFractionDigits}
+                    minimumFractionDigits={this.state.minimumFractionDigits || undefined}
+                    maximumFractionDigits={this.state.maximumFractionDigits || undefined}
                   />
                 </label>
               </div>
@@ -105,8 +107,8 @@ class Editors extends React.Component {
                   <GridCurrencyEditor
                     defaultValue={2}
                     currency={this.state.currencyCode}
-                    minimumFractionDigits={this.state.minimumFractionDigits}
-                    maximumFractionDigits={this.state.maximumFractionDigits}
+                    minimumFractionDigits={this.state.minimumFractionDigits || undefined}
+                    maximumFractionDigits={this.state.maximumFractionDigits || undefined}
                   />
                 </label>
               </div>
@@ -114,9 +116,18 @@ class Editors extends React.Component {
                 <label>
                   Grid Percent Editor:
                   <GridPercentEditor
-                    defaultValue={2}
-                    minimumFractionDigits={this.state.minimumFractionDigits}
-                    maximumFractionDigits={this.state.maximumFractionDigits}
+                    defaultValue={0.2}
+                    minimumFractionDigits={this.state.minimumFractionDigits || undefined}
+                    maximumFractionDigits={this.state.maximumFractionDigits || undefined}
+                  />
+                </label>
+              </div>
+              <div style={{ marginTop: 20 }}>
+                <label>
+                  Grid Rate Editor:
+                  <GridRateEditor
+                    defaultValue={20}
+                    currency={this.state.currencyCode}
                   />
                 </label>
               </div>
@@ -137,11 +148,11 @@ class Formatters extends React.Component {
     currencyFormatterValue: 2,
     decimalFormatterValue: 1.2,
     percentFormatterValue: 0.2,
-    rateFormatterValue: 3.4
+    rateFormatterValue: 3.4,
+    techRateFormatterValue: 1.2
   };
   handleChange = e => {
-    const value = e.target.value === "" ? undefined : e.target.value;
-    this.setState({ [e.target.name]: value });
+    this.setState({ [e.target.name]: e.target.value });
   };
 
   public render() {
@@ -211,8 +222,8 @@ class Formatters extends React.Component {
                   />
                   <DecimalFormatter
                     value={this.state.decimalFormatterValue}
-                    minimumFractionDigits={this.state.minimumFractionDigits}
-                    maximumFractionDigits={this.state.maximumFractionDigits}
+                    minimumFractionDigits={this.state.minimumFractionDigits || undefined}
+                    maximumFractionDigits={this.state.maximumFractionDigits || undefined}
                   />
                 </label>
               </div>
@@ -229,8 +240,8 @@ class Formatters extends React.Component {
                   <CurrencyFormatter
                     value={this.state.currencyFormatterValue}
                     currency={this.state.currencyCode}
-                    minimumFractionDigits={this.state.minimumFractionDigits}
-                    maximumFractionDigits={this.state.maximumFractionDigits}
+                    minimumFractionDigits={this.state.minimumFractionDigits || undefined}
+                    maximumFractionDigits={this.state.maximumFractionDigits || undefined}
                   />
                 </label>
               </div>
@@ -246,8 +257,8 @@ class Formatters extends React.Component {
                   />
                   <PercentFormatter
                     value={this.state.percentFormatterValue}
-                    minimumFractionDigits={this.state.minimumFractionDigits}
-                    maximumFractionDigits={this.state.maximumFractionDigits}
+                    minimumFractionDigits={this.state.minimumFractionDigits || undefined}
+                    maximumFractionDigits={this.state.maximumFractionDigits || undefined}
                   />
                 </label>
               </div>
@@ -264,8 +275,22 @@ class Formatters extends React.Component {
                   <RateFormatter
                     value={this.state.rateFormatterValue}
                     currency={this.state.currencyCode}
-                    minimumFractionDigits={this.state.minimumFractionDigits}
-                    maximumFractionDigits={this.state.maximumFractionDigits}
+                  />
+                </label>
+              </div>
+
+              <div style={{ marginTop: 20 }}>
+                <label>
+                  Tech Rate Formatter:
+                  <input
+                    type="number"
+                    name="techRateFormatterValue"
+                    value={this.state.techRateFormatterValue}
+                    onChange={this.handleChange}
+                  />
+                  <TechRateFormatter
+                    value={this.state.techRateFormatterValue}
+                    currency={this.state.currencyCode}
                   />
                 </label>
               </div>
