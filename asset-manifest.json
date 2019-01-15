@@ -1,13 +1,13 @@
 {
   "main.css": "/intl-editors/static/css/main.00b1e6fc.chunk.css",
-  "main.js": "/intl-editors/static/js/main.defe66f0.chunk.js",
-  "main.js.map": "/intl-editors/static/js/main.defe66f0.chunk.js.map",
+  "main.js": "/intl-editors/static/js/main.7e6f0b9a.chunk.js",
+  "main.js.map": "/intl-editors/static/js/main.7e6f0b9a.chunk.js.map",
   "static/js/1.472d5e45.chunk.js": "/intl-editors/static/js/1.472d5e45.chunk.js",
   "static/js/1.472d5e45.chunk.js.map": "/intl-editors/static/js/1.472d5e45.chunk.js.map",
   "runtime~main.js": "/intl-editors/static/js/runtime~main.70790b2a.js",
   "runtime~main.js.map": "/intl-editors/static/js/runtime~main.70790b2a.js.map",
   "static/css/main.00b1e6fc.chunk.css.map": "/intl-editors/static/css/main.00b1e6fc.chunk.css.map",
   "index.html": "/intl-editors/index.html",
-  "precache-manifest.031b5c52a10be8c3d1f39e85fabd92fd.js": "/intl-editors/precache-manifest.031b5c52a10be8c3d1f39e85fabd92fd.js",
+  "precache-manifest.d4f5643929e08210e218b3c3ba7785e1.js": "/intl-editors/precache-manifest.d4f5643929e08210e218b3c3ba7785e1.js",
   "service-worker.js": "/intl-editors/service-worker.js"
 }
