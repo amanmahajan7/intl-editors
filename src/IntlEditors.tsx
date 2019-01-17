@@ -1,7 +1,7 @@
 /* eslint-disable react/style-prop-object */
 import * as React from 'react';
 import { injectIntl, InjectedIntlProps } from 'react-intl';
-import { Icon, Input } from "semantic-ui-react";
+import { Icon, Input, InputProps } from "semantic-ui-react";
 
 
 import {
@@ -34,21 +34,17 @@ const DECIMAL_REGEX = /[.,]/;
 const NUMBER_REGEX = /^\d*[.,]?\d*$/;
 const NBSP = '\u00A0';
 
-type InputProps = Pick<
-  React.InputHTMLAttributes<HTMLInputElement>,
-  'value' | 'onChange' | 'onFocus' | 'onBlur' | 'onKeyDown' | 'onClick' | 'onPaste'
->;
-type NumberEditorChildrenProps = { isInvalid: boolean; getInputProps: () => InputProps; };
-type NumberEditorChildren = (props: NumberEditorChildrenProps) => React.ReactNode;
-type NumberEditorBaseProps = NumberEditorProps & InjectedIntlProps;
+export type NumberEditorChildrenProps = { isInvalid: boolean; getInputProps: () => InputProps; };
+export type NumberEditorChildren = (props: NumberEditorChildrenProps) => React.ReactNode;
+export type NumberEditorBaseProps = NumberEditorProps & InjectedIntlProps;
 
-type NumberEditorProps = Pick<Intl.NumberFormatOptions, 'style' | 'currency' | 'minimumFractionDigits' | 'maximumFractionDigits'> & {
+export type NumberEditorProps = Pick<Intl.NumberFormatOptions, 'style' | 'currency' | 'minimumFractionDigits' | 'maximumFractionDigits'> & {
   value?: number;
   defaultFractionDigits?: number;
   extraFractionDigits?: number;
-  onChange: (value?: number) => void;
-  select?: () => void;
+  autoFocus?: boolean;
   children: NumberEditorChildren;
+  onChange: (value?: number) => void;
 };
 
 interface NumberEditorBaseState {
@@ -65,9 +61,11 @@ function replaceDecimalSeparator(value: string | number | undefined | null, sepa
 
 class NumberEditorBase extends React.Component<NumberEditorBaseProps, NumberEditorBaseState> {
   readonly decimalSeparator: string;
-  readonly defaultMinimumFractionDigits?: number;
+  readonly defaultMinimumFractionDigits: number;
   readonly defaultMaximumFractionDigits: number;
   readonly state: Readonly<NumberEditorBaseState>;
+
+  input = React.createRef<Input>();
 
   constructor(props: NumberEditorBaseProps, context?: any) {
     super(props, context);
@@ -78,6 +76,7 @@ class NumberEditorBase extends React.Component<NumberEditorBaseProps, NumberEdit
     } = getDefaultFractionDigitsForLocale(intl.locale, { currency, style, minimumFractionDigits, maximumFractionDigits });
 
     this.decimalSeparator = getDecimalSeparator(intl);
+    this.defaultMinimumFractionDigits = minimumFractionDigitsForLocale
     this.defaultMaximumFractionDigits = maximumFractionDigitsForLocale;
     if (typeof minimumFractionDigits === 'undefined' && typeof maximumFractionDigits === 'undefined') {
       // Only set default values if none of the fraction digits are provided
@@ -95,12 +94,23 @@ class NumberEditorBase extends React.Component<NumberEditorBaseProps, NumberEdit
 
   isCopyPaste = false;
 
-  componentDidUpdate() {
-    if (this.state.isInvalid) {
-      // Select the value if it is invalid
-      const { select } = this.props;
-      if (select) {
-        select();
+  componentDidMount() {
+    const { autoFocus } = this.props;
+    if (autoFocus) {
+      const { current } = this.input;
+      if (current != null) {
+        current.focus();
+      }
+    }
+  }
+
+  componentDidUpdate(prevProps: NumberEditorBaseProps, prevState: NumberEditorBaseState) {
+    const { isInvalid, isFocused } = this.state;
+    // Select the text if the value is invalid or the control is focused
+    if (isInvalid || (prevState.isFocused !== isFocused && isFocused)) {
+      const { current } = this.input;
+      if (current != null) {
+        (current as any).select();
       }
     }
   }
@@ -116,50 +126,66 @@ class NumberEditorBase extends React.Component<NumberEditorBaseProps, NumberEdit
     return intl.formatNumber(value, { style, currency, minimumFractionDigits, maximumFractionDigits });
   }
 
+  testPastedValue(valueToTest: number, pastedValue: string, options: Intl.NumberFormatOptions) {
+    const allowedValue = this.props.intl.formatNumber(valueToTest, options);
+    return pastedValue === replaceAll(allowedValue, NBSP, ' ');
+  }
+
   isPastedValueValid(pastedValue: string, parsedValue: number) {
-    const allowedFormatOptions: Intl.NumberFormatOptions[] = [];
-    const { maximumFractionDigits = this.defaultMaximumFractionDigits } = this.props;
-
-    for (let fractionDigits = 0; fractionDigits <= maximumFractionDigits; fractionDigits++) {
-      allowedFormatOptions.push({
-        style: intlStyle.DECIMAL,
-        minimumFractionDigits: fractionDigits,
-        maximumFractionDigits
-      });
-
-      if (this.props.style === intlStyle.CURRENCY) {
-        allowedFormatOptions.push({
-          style: intlStyle.CURRENCY,
-          currency: this.props.currency,
-          minimumFractionDigits: fractionDigits,
-          maximumFractionDigits
-        });
-      }
-    }
-
     // If the formatted value is same as the pasted value then it is considered valid
     // All other values are invalid. This does not handle all the cases as it is difficult
     // to address all the valid cases. This algorithm will be modified as needed
-    return allowedFormatOptions.some(options => {
-      const allowedValue = this.props.intl.formatNumber(parsedValue, options);
-      return pastedValue === replaceAll(allowedValue, NBSP, ' ');
-    });
+    const { maximumFractionDigits = this.defaultMaximumFractionDigits, style, currency } = this.props;
+
+    for (let fractionDigits = 0; fractionDigits <= maximumFractionDigits; fractionDigits++) {
+      if (this.testPastedValue(parsedValue, pastedValue, {
+        style: intlStyle.DECIMAL,
+        minimumFractionDigits: fractionDigits,
+        maximumFractionDigits
+      })) {
+        return true;
+      }
+
+      if (style === intlStyle.CURRENCY) {
+        if (this.testPastedValue(parsedValue, pastedValue, {
+          currency,
+          style,
+          minimumFractionDigits: fractionDigits,
+          maximumFractionDigits
+        })) {
+          return true;
+        }
+      }
+
+      if (style === intlStyle.PERCENT) {
+        if (this.testPastedValue(parsedValue / 100, pastedValue, {
+          style,
+          minimumFractionDigits: fractionDigits,
+          maximumFractionDigits
+        })) {
+          return true;
+        }
+      }
+    }
+
+    return false;
+  }
+
+  getValue() {
+    const { value, style } = this.props;
+    if (value != null && style === intlStyle.PERCENT) {
+      return value * 100;
+    }
+    return value;
   }
 
   getInitialState() {
-    const { style } = this.props;
-    let { value } = this.props;
-    if (value != null && style === intlStyle.PERCENT) {
-      value *= 100;
-    }
-
     return {
-      displayValue: replaceDecimalSeparator(value, this.decimalSeparator),
+      displayValue: replaceDecimalSeparator(this.getValue(), this.decimalSeparator),
       isInvalid: false,
       isFocused: false
     };
   }
-
   // TODO: looking for a better type
   setValue = (stateToSet: any) => {
     const { style } = this.props;
@@ -178,9 +204,8 @@ class NumberEditorBase extends React.Component<NumberEditorBaseProps, NumberEdit
 
   showLastValidValue = () => {
     if (this.state.isInvalid) {
-      const { value } = this.props;
       this.setValue({
-        displayValue: replaceDecimalSeparator(value, this.decimalSeparator),
+        displayValue: replaceDecimalSeparator(this.getValue(), this.decimalSeparator),
         isInvalid: false
       });
     }
@@ -268,6 +293,8 @@ class NumberEditorBase extends React.Component<NumberEditorBaseProps, NumberEdit
   };
 
   handleBlur = () => {
+    const {value} = this.props;
+    const displayValue = value == null 
     this.setState({ isFocused: false });
     this.showLastValidValue();
   };
@@ -292,6 +319,7 @@ class NumberEditorBase extends React.Component<NumberEditorBaseProps, NumberEdit
     const formattedValue = !isFocused && value != null ? this.formatValue(value) : displayValue;
 
     return {
+      ref: this.input,
       value: formattedValue,
       onChange: this.handleChange,
       onFocus: this.handleFocus,
@@ -334,12 +362,11 @@ interface GridNumberEditorState {
 
 type NumberEditorFactoryProps = Pick<NumberEditorProps, 'style' | 'defaultFractionDigits' | 'extraFractionDigits'>;
 
-function DefaultGridNumberInput({ getInputProps, isInvalid, inputRef }: NumberEditorChildrenProps & { inputRef: React.RefObject<Input> }) {
+function DefaultGridNumberInput({ getInputProps, isInvalid }: NumberEditorChildrenProps) {
   return (
     <Input
       {...getInputProps()}
-      ref={inputRef}
-      error={isInvalid}
+      className={isInvalid ? 'invalidGridInput' : undefined}
       icon={isInvalid && errorIcon}
       iconPosition="left" />
   );
@@ -347,32 +374,10 @@ function DefaultGridNumberInput({ getInputProps, isInvalid, inputRef }: NumberEd
 
 function gridNumberEditorFactory<P extends GridNumberEditorProps>(intlProps: NumberEditorFactoryProps): React.ComponentClass<P, GridNumberEditorState> {
   return class GridNumberEditor extends React.Component<P, GridNumberEditorState> {
-    input = React.createRef<Input>();
     readonly state: Readonly<GridNumberEditorState> = { value: this.props.defaultValue };
-
-    componentDidMount() {
-      const { autoFocus } = this.props;
-      if (autoFocus) {
-        this.focus();
-      }
-    }
 
     handleChange = (value?: number) => {
       this.setState({ value });
-    };
-
-    focus = () => {
-      const { current } = this.input;
-      if (current != null) {
-        current.focus();
-      }
-    };
-
-    select = () => {
-      const { current } = this.input;
-      if (current != null) {
-        (current as any).select();
-      }
     };
 
     getValue() {
@@ -386,12 +391,11 @@ function gridNumberEditorFactory<P extends GridNumberEditorProps>(intlProps: Num
           {...intlProps}
           {...rest}
           value={this.state.value}
-          onChange={this.handleChange}
-          select={this.select}>
+          onChange={this.handleChange}>
           {p =>
             children
               ? (children as NumberEditorChildren)(p)
-              : <DefaultGridNumberInput {...p} inputRef={this.input} />
+              : <DefaultGridNumberInput {...p} />
           }
         </NumberEditor>
       );

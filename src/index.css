@@ -16,3 +16,16 @@ code {
 .ui.input > input {
   text-align: right;
 }
+
+.invalidGridInput.ui.input>input::-moz-selection {
+  color: #E41123;
+}
+
+.invalidGridInput.ui.input>input::selection {
+  color: #E41123;
+}
+
+.invalidGridInput.ui.input> input, 
+.invalidGridInput.ui.input>.icon {
+  color: #E41123;
+}

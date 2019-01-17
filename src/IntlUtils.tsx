@@ -51,9 +51,10 @@ export function parseDecimal(value: unknown, decimalSeparator: string) {
         .replace(decimalSeparator, '.') // make sure decimal point is standard
     );
 
-    return !Number.isNaN(parsedValue) ? parsedValue : undefined;
+    if (!Number.isNaN(parsedValue)) {
+      return parsedValue;
+    }
   }
 
-  // TODO: What should be the default value?
   return undefined;
 }
