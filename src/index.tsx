@@ -39,8 +39,9 @@ class Editors extends React.Component {
   };
 
   public render() {
+    const key = `${this.state.locale}-${this.state.currencyCode}-${this.state.minimumFractionDigits}-${this.state.maximumFractionDigits}`;
     return (
-      <IntlProvider locale={this.state.locale} key={this.state.locale}>
+      <IntlProvider locale={this.state.locale} key={key}>
         <div>
           <fieldset>
             <legend>Editors</legend>
@@ -159,8 +160,9 @@ class Formatters extends React.Component {
   };
 
   public render() {
+    const key = `${this.state.locale}-${this.state.currencyCode}-${this.state.minimumFractionDigits}-${this.state.maximumFractionDigits}`;
     return (
-      <IntlProvider locale={this.state.locale} key={this.state.locale}>
+      <IntlProvider locale={this.state.locale} key={key}>
         <div>
           <fieldset>
             <legend>Formatters</legend>
