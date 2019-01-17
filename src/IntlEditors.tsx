@@ -200,7 +200,7 @@ class NumberEditorBase extends React.Component<NumberEditorBaseProps, NumberEdit
   }
 
   // TODO: looking for a better type
-  setValue = (stateToSet: any) => {
+  internalSetState = (stateToSet: any) => {
     const { style } = this.props;
     const isValueChanged = stateToSet.hasOwnProperty('value');
     const { value, ...state } = stateToSet;
@@ -223,7 +223,7 @@ class NumberEditorBase extends React.Component<NumberEditorBaseProps, NumberEdit
     if (isInvalid) {
       // Show the invalid displayValue, we do not change the underlying value
       // displayValue will be reverted to the last valid value on the next action (blur, click)
-      this.setValue({
+      this.internalSetState({
         isInvalid: true,
         displayValue: pastedValue
       });
@@ -231,7 +231,7 @@ class NumberEditorBase extends React.Component<NumberEditorBaseProps, NumberEdit
     }
 
     // Value is valid, show the value without any formating elements (percentage, currency symbols etc.)
-    this.setValue({
+    this.internalSetState({
       isInvalid: false,
       value: parsedValue,
       displayValue: replaceDecimalSeparator(parsedValue, this.decimalSeparator)
@@ -242,7 +242,11 @@ class NumberEditorBase extends React.Component<NumberEditorBaseProps, NumberEdit
     const { value } = target;
 
     if (value === '') {
-      this.setValue({ value: undefined, displayValue: '' });
+      this.internalSetState({
+        value: undefined,
+        displayValue: '',
+        isInvalid: false
+      });
       return;
     }
 
@@ -259,7 +263,11 @@ class NumberEditorBase extends React.Component<NumberEditorBaseProps, NumberEdit
         const displayValue = replaceDecimalSeparator(value, this.decimalSeparator);
         // Add "0" in front if the decimal separator is entered in empty field
         if (displayValue.length === 1) {
-          this.setValue({ value: 0, displayValue: `0${displayValue}` });
+          this.internalSetState({
+            value: 0,
+            displayValue: `0${displayValue}`,
+            isInvalid: false
+          });
           return;
         }
 
@@ -269,16 +277,18 @@ class NumberEditorBase extends React.Component<NumberEditorBaseProps, NumberEdit
 
         if (displayValueDecimalPart.length > maximumFractionDigits) {
           const roundedDisplayValue = `${displayValueIntegerPart}${this.decimalSeparator}${displayValueDecimalPart.slice(0, maximumFractionDigits)}`;
-          this.setValue({
+          this.internalSetState({
             value: parseFloat(replaceDecimalSeparator(roundedDisplayValue, '.')),
-            displayValue: roundedDisplayValue
+            displayValue: roundedDisplayValue,
+            isInvalid: false
           });
           return;
         }
 
-        this.setValue({
+        this.internalSetState({
           value: parseFloat(replaceDecimalSeparator(value, '.')),
-          displayValue
+          displayValue,
+          isInvalid: false
         });
         return;
       }
@@ -286,10 +296,23 @@ class NumberEditorBase extends React.Component<NumberEditorBaseProps, NumberEdit
       // Value has no decimal separator. Convert value to number and convert
       // it back to string. This removes the leading 0 i.e 01 -> 1
       const parsedValue = parseFloat(value);
-      this.setValue({ value: parsedValue, displayValue: parsedValue.toString() });
+      this.internalSetState({
+        value: parsedValue,
+        displayValue: parsedValue.toString(),
+        isInvalid: false
+      });
+      return;
     }
 
     // Value is not a valid number so it is rejected
+    if (this.state.isInvalid) {
+      // Clear the value if the control is in invalid state
+      this.internalSetState({
+        value: undefined,
+        displayValue: '',
+        isInvalid: false
+      });
+    }
   };
 
   handleFocus = () => {
@@ -297,7 +320,7 @@ class NumberEditorBase extends React.Component<NumberEditorBaseProps, NumberEdit
   };
 
   handleBlur = () => {
-    this.setState({
+    this.internalSetState({
       isFocused: false,
       isInvalid: false,
       displayValue: this.getDisplayValue()
@@ -306,7 +329,7 @@ class NumberEditorBase extends React.Component<NumberEditorBaseProps, NumberEdit
 
   handleClick = () => {
     if (this.state.isInvalid) {
-      this.setValue({
+      this.internalSetState({
         displayValue: this.getDisplayValue(),
         isInvalid: false
       });
