@@ -179,13 +179,26 @@ class NumberEditorBase extends React.Component<NumberEditorBaseProps, NumberEdit
     return value;
   }
 
+  getDisplayValue() {
+    const value = this.getValue();
+    const {
+      intl,
+      minimumFractionDigits = this.defaultMinimumFractionDigits,
+      maximumFractionDigits = this.defaultMaximumFractionDigits
+    } = this.props;
+    return value != null
+      ? intl.formatNumber(value, { style: intlStyle.DECIMAL, minimumFractionDigits, maximumFractionDigits, useGrouping: false })
+      : '';
+  }
+
   getInitialState() {
     return {
-      displayValue: replaceDecimalSeparator(this.getValue(), this.decimalSeparator),
+      displayValue: this.getDisplayValue(),
       isInvalid: false,
       isFocused: false
     };
   }
+
   // TODO: looking for a better type
   setValue = (stateToSet: any) => {
     const { style } = this.props;
@@ -200,15 +213,6 @@ class NumberEditorBase extends React.Component<NumberEditorBaseProps, NumberEdit
         this.props.onChange(valueToSave);
       }
     });
-  };
-
-  showLastValidValue = () => {
-    if (this.state.isInvalid) {
-      this.setValue({
-        displayValue: replaceDecimalSeparator(this.getValue(), this.decimalSeparator),
-        isInvalid: false
-      });
-    }
   };
 
   handleCopyPaste = (pastedValue: string) => {
@@ -293,14 +297,20 @@ class NumberEditorBase extends React.Component<NumberEditorBaseProps, NumberEdit
   };
 
   handleBlur = () => {
-    const {value} = this.props;
-    const displayValue = value == null 
-    this.setState({ isFocused: false });
-    this.showLastValidValue();
+    this.setState({
+      isFocused: false,
+      isInvalid: false,
+      displayValue: this.getDisplayValue()
+    });
   };
 
   handleClick = () => {
-    this.showLastValidValue();
+    if (this.state.isInvalid) {
+      this.setValue({
+        displayValue: this.getDisplayValue(),
+        isInvalid: false
+      });
+    }
   };
 
   handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {

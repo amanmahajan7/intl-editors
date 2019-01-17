@@ -91,7 +91,7 @@ class Editors extends React.Component {
                     value={this.state.currencyCode}
                     onChange={this.handleChange}
                   >
-                    {currencyCode.map(c => <option value={c}>{c}</option>)}
+                    {currencyCode.sort().map(c => <option value={c}>{c}</option>)}
                   </select>
                 </label>
               </div>
@@ -212,7 +212,7 @@ class Formatters extends React.Component {
                     value={this.state.currencyCode}
                     onChange={this.handleChange}
                   >
-                    {currencyCode.map(c => <option value={c}>{c}</option>)}
+                    {currencyCode.sort().map(c => <option value={c}>{c}</option>)}
                   </select>
                 </label>
               </div>
