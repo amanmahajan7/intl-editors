@@ -3,6 +3,8 @@ import * as React from "react";
 import { render } from "react-dom";
 import { IntlProvider, addLocaleData } from "react-intl";
 
+import { currencyCode } from './currenyCode';
+
 import {
   GridDecimalEditor,
   GridCurrencyEditor,
@@ -83,12 +85,13 @@ class Editors extends React.Component {
               <div style={{ marginTop: 20 }}>
                 <label>
                   currency code:
-                  <input
-                    type="text"
+                  <select
                     name="currencyCode"
                     value={this.state.currencyCode}
                     onChange={this.handleChange}
-                  />
+                  >
+                    {currencyCode.map(c => <option value={c}>{c}</option>)}
+                  </select>
                 </label>
               </div>
               <div style={{ marginTop: 20 }}>
@@ -202,12 +205,13 @@ class Formatters extends React.Component {
               <div style={{ marginTop: 20 }}>
                 <label>
                   currency code:
-                  <input
-                    type="text"
+                  <select
                     name="currencyCode"
                     value={this.state.currencyCode}
                     onChange={this.handleChange}
-                  />
+                  >
+                    {currencyCode.map(c => <option value={c}>{c}</option>)}
+                  </select>
                 </label>
               </div>
 
@@ -302,10 +306,22 @@ class Formatters extends React.Component {
   }
 }
 
+class App extends React.Component {
+  componentDidCatch() {
+    console.log('An error occurred');
+  }
+
+  render() {
+    return (
+      <div>
+        <Editors />
+        <Formatters />
+      </div>
+    );
+  }
+}
+
 render(
-  <div>
-    <Editors />
-    <Formatters />
-  </div>,
+  <App />,
   document.getElementById("root")
 );
