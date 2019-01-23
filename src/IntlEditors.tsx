@@ -7,7 +7,7 @@ import { Icon, Input, InputProps } from "semantic-ui-react";
 import {
   getDecimalSeparator,
   getDefaultFractionDigitsForLocale,
-  parseDecimal,
+  parseDecimal as parseNumber,
   intlStyle,
   defaultFractionDigits,
   extraFractionDigits
@@ -38,11 +38,20 @@ export type NumberEditorChildrenProps = { isInvalid: boolean; getInputProps: () 
 export type NumberEditorChildren = (props: NumberEditorChildrenProps) => React.ReactNode;
 export type NumberEditorBaseProps = NumberEditorProps & InjectedIntlProps;
 
-export type NumberEditorProps = Pick<Intl.NumberFormatOptions, 'style' | 'currency' | 'minimumFractionDigits' | 'maximumFractionDigits'> & {
+export type SupportedHtmlInputProps = Pick<
+  React.HTMLProps<HTMLInputElement>,
+  'autoFocus' | 'disabled' | 'readOnly' | 'name' | 'tabIndex' | 'title'
+>;
+
+type SupportedNumberFormatOptions = Pick<
+  Intl.NumberFormatOptions,
+  'style' | 'currency' | 'minimumFractionDigits' | 'maximumFractionDigits'
+>;
+
+export type NumberEditorProps = SupportedHtmlInputProps & SupportedNumberFormatOptions & {
   value?: number;
   defaultFractionDigits?: number;
   extraFractionDigits?: number;
-  autoFocus?: boolean;
   children: NumberEditorChildren;
   onChange: (value?: number) => void;
 };
@@ -53,6 +62,8 @@ interface NumberEditorBaseState {
   isFocused: boolean;
 }
 
+type InternalSetStateParams = NumberEditorBaseState & { value?: number; };
+
 function replaceDecimalSeparator(value: string | number | undefined | null, separator: string) {
   return value != null
     ? value.toString().replace(DECIMAL_REGEX, separator)
@@ -61,31 +72,46 @@ function replaceDecimalSeparator(value: string | number | undefined | null, sepa
 
 class NumberEditorBase extends React.Component<NumberEditorBaseProps, NumberEditorBaseState> {
   readonly decimalSeparator: string;
-  readonly defaultMinimumFractionDigits: number;
-  readonly defaultMaximumFractionDigits: number;
+  readonly minimumFractionDigits: number;
+  readonly maximumFractionDigits: number;
   readonly state: Readonly<NumberEditorBaseState>;
 
   input = React.createRef<Input>();
 
-  constructor(props: NumberEditorBaseProps, context?: any) {
-    super(props, context);
+  constructor(props: NumberEditorBaseProps) {
+    super(props);
     const { intl, currency, style, minimumFractionDigits, maximumFractionDigits, defaultFractionDigits, extraFractionDigits } = this.props;
+    // The default value of minimumFractionDigits for currency formatting is the number of minor unit digits provided by the ISO 4217 currency code list
+    // If the maximumFractionDigits value is less than the default minimumFractionDigits then Intl.NumberFormat throws an error.
+    let minimumFractionDigitsForStyle = minimumFractionDigits;
+    if (style === intlStyle.CURRENCY && typeof minimumFractionDigits === 'undefined' && typeof maximumFractionDigits !== 'undefined') {
+      const { minimumFractionDigits: minimumFractionDigitsForCurrency } = getDefaultFractionDigitsForLocale(intl.locale, { currency, style });
+      if (minimumFractionDigitsForCurrency > maximumFractionDigits) {
+        minimumFractionDigitsForStyle = maximumFractionDigits;
+      }
+    }
+
     const {
       minimumFractionDigits: minimumFractionDigitsForLocale,
       maximumFractionDigits: maximumFractionDigitsForLocale
-    } = getDefaultFractionDigitsForLocale(intl.locale, { currency, style, minimumFractionDigits, maximumFractionDigits });
+    } = getDefaultFractionDigitsForLocale(intl.locale, {
+      currency,
+      style,
+      minimumFractionDigits: minimumFractionDigitsForStyle,
+      maximumFractionDigits
+    });
 
     this.decimalSeparator = getDecimalSeparator(intl);
-    this.defaultMinimumFractionDigits = minimumFractionDigitsForLocale
-    this.defaultMaximumFractionDigits = maximumFractionDigitsForLocale;
+    this.minimumFractionDigits = minimumFractionDigitsForLocale;
+    this.maximumFractionDigits = maximumFractionDigitsForLocale;
     if (typeof minimumFractionDigits === 'undefined' && typeof maximumFractionDigits === 'undefined') {
       // Only set default values if none of the fraction digits are provided
       if (typeof defaultFractionDigits !== 'undefined') {
-        this.defaultMinimumFractionDigits = defaultFractionDigits;
-        this.defaultMaximumFractionDigits = defaultFractionDigits;
+        this.minimumFractionDigits = defaultFractionDigits;
+        this.maximumFractionDigits = defaultFractionDigits;
       } else if (typeof extraFractionDigits !== 'undefined') {
-        this.defaultMinimumFractionDigits = minimumFractionDigitsForLocale + extraFractionDigits;
-        this.defaultMaximumFractionDigits = minimumFractionDigitsForLocale + extraFractionDigits;
+        this.minimumFractionDigits = minimumFractionDigitsForLocale + extraFractionDigits;
+        this.maximumFractionDigits = minimumFractionDigitsForLocale + extraFractionDigits;
       }
     }
 
@@ -116,13 +142,9 @@ class NumberEditorBase extends React.Component<NumberEditorBaseProps, NumberEdit
   }
 
   formatValue(value: number) {
-    const {
-      intl,
-      style,
-      currency,
-      minimumFractionDigits = this.defaultMinimumFractionDigits,
-      maximumFractionDigits = this.defaultMaximumFractionDigits
-    } = this.props;
+    const { intl, style, currency } = this.props;
+    const { minimumFractionDigits, maximumFractionDigits } = this;
+
     return intl.formatNumber(value, { style, currency, minimumFractionDigits, maximumFractionDigits });
   }
 
@@ -135,7 +157,8 @@ class NumberEditorBase extends React.Component<NumberEditorBaseProps, NumberEdit
     // If the formatted value is same as the pasted value then it is considered valid
     // All other values are invalid. This does not handle all the cases as it is difficult
     // to address all the valid cases. This algorithm will be modified as needed
-    const { maximumFractionDigits = this.defaultMaximumFractionDigits, style, currency } = this.props;
+    const { style, currency } = this.props;
+    const { maximumFractionDigits } = this;
 
     for (let fractionDigits = 0; fractionDigits <= maximumFractionDigits; fractionDigits++) {
       const decimalOptions = {
@@ -189,6 +212,11 @@ class NumberEditorBase extends React.Component<NumberEditorBaseProps, NumberEdit
     return false;
   }
 
+  isInteger() {
+    const { minimumFractionDigits, maximumFractionDigits } = this;
+    return minimumFractionDigits === 0 && maximumFractionDigits === 0;
+  }
+
   getValue() {
     const { value, style } = this.props;
     if (value != null && style === intlStyle.PERCENT) {
@@ -199,13 +227,15 @@ class NumberEditorBase extends React.Component<NumberEditorBaseProps, NumberEdit
 
   getDisplayValue() {
     const value = this.getValue();
-    const {
-      intl,
-      minimumFractionDigits = this.defaultMinimumFractionDigits,
-      maximumFractionDigits = this.defaultMaximumFractionDigits
-    } = this.props;
+    const { minimumFractionDigits, maximumFractionDigits } = this;
+
     return value != null
-      ? intl.formatNumber(value, { style: intlStyle.DECIMAL, minimumFractionDigits, maximumFractionDigits, useGrouping: false })
+      ? this.props.intl.formatNumber(value, {
+        style: intlStyle.DECIMAL,
+        minimumFractionDigits,
+        maximumFractionDigits,
+        useGrouping: false
+      })
       : '';
   }
 
@@ -217,11 +247,10 @@ class NumberEditorBase extends React.Component<NumberEditorBaseProps, NumberEdit
     };
   }
 
-  // TODO: looking for a better type
-  internalSetState = (stateToSet: any) => {
+  internalSetState = <K extends keyof InternalSetStateParams>(stateToSet: Pick<InternalSetStateParams, K>) => {
     const { style } = this.props;
     const isValueChanged = stateToSet.hasOwnProperty('value');
-    const { value, ...state } = stateToSet;
+    const { value, ...state } = stateToSet as { value?: number; };
     this.setState(state, () => {
       let valueToSave = value;
       if (valueToSave != null && style === intlStyle.PERCENT) {
@@ -235,30 +264,26 @@ class NumberEditorBase extends React.Component<NumberEditorBaseProps, NumberEdit
 
   handleCopyPaste = (pastedValue: string) => {
     this.isCopyPaste = false;
-    const parsedValue = parseDecimal(pastedValue, this.decimalSeparator);
+    const parsedValue = parseNumber(pastedValue, this.decimalSeparator);
     const isInvalid = parsedValue == null || !this.isPastedValueValid(pastedValue, parsedValue);
 
     if (isInvalid) {
       // Show the invalid displayValue, we do not change the underlying value
       // displayValue will be reverted to the last valid value on the next action (blur, click)
       this.internalSetState({
-        isInvalid: true,
-        displayValue: pastedValue
+        displayValue: pastedValue,
+        isInvalid: true
       });
       return;
     }
 
     // Value is valid, show the value without any formating elements (percentage, currency symbols etc.)
     this.internalSetState({
-      isInvalid: false,
       value: parsedValue,
-      displayValue: replaceDecimalSeparator(parsedValue, this.decimalSeparator)
+      displayValue: replaceDecimalSeparator(parsedValue, this.decimalSeparator),
+      isInvalid: false
     });
   };
-
-  isInteger() {
-    return this.props.defaultFractionDigits === 0;
-  }
 
   handleChange = ({ target }: React.ChangeEvent<HTMLInputElement>) => {
     const { value } = target;
@@ -281,7 +306,6 @@ class NumberEditorBase extends React.Component<NumberEditorBaseProps, NumberEdit
     if (NUMBER_REGEX.test(value)) {
       // Check if value has a decimal separator
       if (DECIMAL_REGEX.test(value)) {
-        console.log('integer')
         if (this.isInteger()) {
           return;
         }
@@ -299,7 +323,7 @@ class NumberEditorBase extends React.Component<NumberEditorBaseProps, NumberEdit
         }
 
         // Check the precision setting and set the maximum fraction digits.
-        const { maximumFractionDigits = this.defaultMaximumFractionDigits } = this.props;
+        const { maximumFractionDigits } = this;
         const [displayValueIntegerPart, displayValueDecimalPart] = displayValue.split(this.decimalSeparator);
 
         if (displayValueDecimalPart.length > maximumFractionDigits) {
@@ -374,13 +398,18 @@ class NumberEditorBase extends React.Component<NumberEditorBaseProps, NumberEdit
   };
 
   getInputProps = () => {
-    const { value } = this.props;
+    const { value, name, title, tabIndex, disabled, readOnly } = this.props;
     const { displayValue, isFocused } = this.state;
-    const formattedValue = !isFocused && value != null ? this.formatValue(value) : displayValue;
+    const inputValue = !isFocused && value != null ? this.formatValue(value) : displayValue;
 
     return {
+      name,
+      title,
+      tabIndex,
+      disabled,
+      readOnly,
       ref: this.input,
-      value: formattedValue,
+      value: inputValue,
       onChange: this.handleChange,
       onFocus: this.handleFocus,
       onBlur: this.handleBlur,
@@ -404,7 +433,7 @@ class NumberEditorBase extends React.Component<NumberEditorBaseProps, NumberEdit
   }
 }
 
-const NumberEditor = injectIntl(NumberEditorBase);
+export const NumberEditor = injectIntl(NumberEditorBase);
 
 const errorMessage =
   "Invalid format. Only numbers and single decimal separator are allowed.";
