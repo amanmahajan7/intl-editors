@@ -46,7 +46,11 @@ function NumberFormatter({ value, defaultFractionDigits, ...props }: NumberForma
     extraProps.maximumFractionDigits = defaultFractionDigits;
   }
 
-  return <FormattedNumber value={value} {...props} {...extraProps} />;
+  return (
+    <FormattedNumber value={value} {...props} {...extraProps}>
+      {formattedNumber => formattedNumber}
+    </FormattedNumber>
+  );
 }
 
 export type DecimalFormatterProps = FormatterProps;

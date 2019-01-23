@@ -138,31 +138,49 @@ class NumberEditorBase extends React.Component<NumberEditorBaseProps, NumberEdit
     const { maximumFractionDigits = this.defaultMaximumFractionDigits, style, currency } = this.props;
 
     for (let fractionDigits = 0; fractionDigits <= maximumFractionDigits; fractionDigits++) {
-      if (this.testPastedValue(parsedValue, pastedValue, {
+      const decimalOptions = {
         style: intlStyle.DECIMAL,
         minimumFractionDigits: fractionDigits,
         maximumFractionDigits
-      })) {
+      };
+
+      if (this.testPastedValue(parsedValue, pastedValue, decimalOptions)) {
+        return true;
+      }
+
+      if (this.testPastedValue(parsedValue, pastedValue, { ...decimalOptions, useGrouping: false })) {
         return true;
       }
 
       if (style === intlStyle.CURRENCY) {
-        if (this.testPastedValue(parsedValue, pastedValue, {
+        const currencyOptions = {
           currency,
           style,
           minimumFractionDigits: fractionDigits,
           maximumFractionDigits
-        })) {
+        };
+
+        if (this.testPastedValue(parsedValue, pastedValue, currencyOptions)) {
+          return true;
+        }
+
+        if (this.testPastedValue(parsedValue, pastedValue, { ...currencyOptions, useGrouping: false })) {
           return true;
         }
       }
 
       if (style === intlStyle.PERCENT) {
-        if (this.testPastedValue(parsedValue / 100, pastedValue, {
+        const percentOptions = {
           style,
           minimumFractionDigits: fractionDigits,
           maximumFractionDigits
-        })) {
+        };
+
+        if (this.testPastedValue(parsedValue / 100, pastedValue, percentOptions)) {
+          return true;
+        }
+
+        if (this.testPastedValue(parsedValue / 100, pastedValue, { ...percentOptions, useGrouping: false })) {
           return true;
         }
       }
@@ -238,6 +256,10 @@ class NumberEditorBase extends React.Component<NumberEditorBaseProps, NumberEdit
     });
   };
 
+  isInteger() {
+    return this.props.defaultFractionDigits === 0;
+  }
+
   handleChange = ({ target }: React.ChangeEvent<HTMLInputElement>) => {
     const { value } = target;
 
@@ -259,6 +281,11 @@ class NumberEditorBase extends React.Component<NumberEditorBaseProps, NumberEdit
     if (NUMBER_REGEX.test(value)) {
       // Check if value has a decimal separator
       if (DECIMAL_REGEX.test(value)) {
+        console.log('integer')
+        if (this.isInteger()) {
+          return;
+        }
+
         // Replace the decimal separator as per the current locale
         const displayValue = replaceDecimalSeparator(value, this.decimalSeparator);
         // Add "0" in front if the decimal separator is entered in empty field
@@ -436,6 +463,15 @@ function gridNumberEditorFactory<P extends GridNumberEditorProps>(intlProps: Num
   };
 }
 
+export type GridIntegerEditorProps = GridNumberEditorProps;
+export const GridIntegerEditor = gridNumberEditorFactory<GridIntegerEditorProps>({
+  style: intlStyle.DECIMAL,
+  defaultFractionDigits: 0
+});
+
+export type GridUnitsEditorProps = GridIntegerEditorProps;
+export { GridIntegerEditor as GridUnitsEditor };
+
 export type GridDecimalEditorProps = GridNumberEditorProps & Pick<NumberEditorBaseProps, 'minimumFractionDigits' | 'maximumFractionDigits'>;
 export const GridDecimalEditor = gridNumberEditorFactory<GridDecimalEditorProps>({
   style: intlStyle.DECIMAL,
@@ -448,18 +484,18 @@ export const GridPercentEditor = gridNumberEditorFactory<GridPercentEditorProps>
   defaultFractionDigits: defaultFractionDigits.PERCENT
 });
 
-export type GridCurrencyEditorProps = GridNumberEditorProps & Pick<NumberEditorBaseProps, 'minimumFractionDigits' | 'maximumFractionDigits'> & { currency: string; };
+export type GridCurrencyEditorProps = GridNumberEditorProps & Pick<NumberEditorBaseProps, 'minimumFractionDigits' | 'maximumFractionDigits' | 'currency'>;
 export const GridCurrencyEditor = gridNumberEditorFactory<GridCurrencyEditorProps>({
   style: intlStyle.CURRENCY
 });
 
-export type GridRateEditorProps = GridNumberEditorProps & { currency: string };
+export type GridRateEditorProps = GridNumberEditorProps & Pick<NumberEditorBaseProps, 'currency'>;
 export const GridRateEditor = gridNumberEditorFactory<GridRateEditorProps>({
   style: intlStyle.CURRENCY,
   extraFractionDigits: extraFractionDigits.RATE
 });
 
-export type GridTechRateEditorProps = GridNumberEditorProps & { currency: string };
+export type GridTechRateEditorProps = GridNumberEditorProps & Pick<NumberEditorBaseProps, 'currency'>;
 export const GridTechRateEditor = gridNumberEditorFactory<GridTechRateEditorProps>({
   style: intlStyle.CURRENCY,
   extraFractionDigits: extraFractionDigits.TECH_RATE

@@ -6,6 +6,7 @@ import { IntlProvider, addLocaleData } from "react-intl";
 import { currencyCode } from './currenyCode';
 
 import {
+  GridIntegerEditor,
   GridDecimalEditor,
   GridCurrencyEditor,
   GridPercentEditor,
@@ -34,7 +35,6 @@ class Editors extends React.Component {
     currencyCode: "USD"
   };
   handleChange = e => {
-    console.log({ [e.target.name]: e.target.value })
     this.setState({ [e.target.name]: e.target.value });
   };
 
@@ -93,6 +93,14 @@ class Editors extends React.Component {
                   >
                     {currencyCode.sort().map(c => <option value={c}>{c}</option>)}
                   </select>
+                </label>
+              </div>
+              <div style={{ marginTop: 20 }}>
+                <label>
+                  Grid Integer Editor:
+                  <GridIntegerEditor
+                    defaultValue={2}
+                  />
                 </label>
               </div>
               <div style={{ marginTop: 20 }}>
